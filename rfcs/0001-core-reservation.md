@@ -122,6 +122,7 @@ service ReservationService {
 We use postgres as the database. Below is the schema:
 
 ```pgsql
+CREATE SCHEMA rsvp;
 CREATE EXTENSION
 IF
  NOT EXISTS "pgcrypto";
@@ -132,7 +133,6 @@ CREATE EXTENSION
 IF
  NOT EXISTS "btree_gist";
 
-CREATE SCHEMA rsvp;
 CREATE TYPE rsvp.reservation_status AS ENUM ( 'unknown', 'pending', 'confirmed', 'blocked' );
 CREATE TYPE rsvp.reservation_update_type AS ENUM ( 'unknown', 'create', 'update', 'delete' );
 
