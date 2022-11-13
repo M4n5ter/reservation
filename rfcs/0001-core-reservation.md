@@ -189,7 +189,7 @@ CREATE
   CREATE TRIGGER reservations_trigger AFTER INSERT
   OR UPDATE
   OR DELETE ON rsvp.reservations FOR EACH ROW
- EXECUTE PROCEDURE rsvp.reservations_trigger ( );
+ EXECUTE FUNCTION rsvp.reservations_trigger ( );
 ```
 
 Here we use EXCLUDE constraint provided by postgres to ensure that on overlapping reservations cannot be made for a given resource at a given time.
