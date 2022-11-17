@@ -4,8 +4,8 @@
 pub struct Reservation {
     /// unique id for the reservation, if put into ReservationRequest, id should be
     /// empty
-    #[prost(int64, tag = "1")]
-    pub id: i64,
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
     /// user id for the reservation
     #[prost(string, tag = "2")]
     pub user_id: ::prost::alloc::string::String,
@@ -175,7 +175,9 @@ pub struct ListenResponse {
     pub reservation: ::core::option::Option<Reservation>,
 }
 /// reservation status for a given time period
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[derive(
+    sqlx::Type, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration,
+)]
 #[repr(i32)]
 pub enum ReservationStatus {
     Unknown = 0,
