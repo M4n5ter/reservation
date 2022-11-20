@@ -36,11 +36,16 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
-    async fn change_status(
-        &self,
-        _id: ReservationId,
-    ) -> Result<abi::Reservation, ReservationError> {
-        todo!()
+    /// change pending status to confirmed status.
+    async fn change_status(&self, id: ReservationId) -> Result<abi::Reservation, ReservationError> {
+        let rsvp: abi::Reservation = sqlx::query_as(
+            "UPDATE rsvp.reservations SET status = 'confirmed' WHERE id = $1 and status = 'pending' RETURNING *",
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(rsvp)
     }
     async fn update_note(
         &self,

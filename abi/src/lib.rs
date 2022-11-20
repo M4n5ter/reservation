@@ -1,3 +1,4 @@
+mod map;
 mod pb;
 use chrono::{DateTime, NaiveDateTime, Utc};
 pub use pb::*;
@@ -29,4 +30,25 @@ impl fmt::Display for ReservationStatus {
             ReservationStatus::Unknown => write!(f, "unknown"),
         }
     }
+}
+
+impl From<RsvpStatus> for ReservationStatus {
+    fn from(status: RsvpStatus) -> Self {
+        match status {
+            RsvpStatus::Unknown => ReservationStatus::Unknown,
+            RsvpStatus::Pending => ReservationStatus::Pending,
+            RsvpStatus::Confirmed => ReservationStatus::Confirmed,
+            RsvpStatus::Blocked => ReservationStatus::Blocked,
+        }
+    }
+}
+
+/// database equivalent of the "reservation_status" enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
+#[sqlx(type_name = "reservation_status", rename_all = "lowercase")]
+pub enum RsvpStatus {
+    Unknown,
+    Pending,
+    Confirmed,
+    Blocked,
 }
