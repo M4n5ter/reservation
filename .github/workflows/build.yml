@@ -40,6 +40,5 @@ jobs:
           postgresql db: 'm4n5ter'
           postgresql user: 'm4n5ter'
           postgresql password: '123456'
-          postgresql port: 5432
       - name: Execute rust tests
         run: cargo nextest run --all-features
