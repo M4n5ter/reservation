@@ -35,7 +35,7 @@ impl Rsvp for ReservationManager {
     /// change pending status to confirmed status.
     async fn change_status(&self, id: ReservationId) -> Result<abi::Reservation, ReservationError> {
         let rsvp = sqlx::query_as(
-            "UPDATE rsvp.reservations SET status = 'confirmed' WHERE id = $1 and status = 'pending' RETURNING *",
+            "UPDATE rsvp.reservations SET status = 'confirmed' WHERE id = $1::UUID and status = 'pending' RETURNING *",
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -43,19 +43,43 @@ impl Rsvp for ReservationManager {
 
         Ok(rsvp)
     }
+
+    /// update reservation's note.
     async fn update_note(
         &self,
-        _id: ReservationId,
-        _note: String,
+        id: ReservationId,
+        note: String,
     ) -> Result<abi::Reservation, ReservationError> {
-        todo!()
+        let rsvp = sqlx::query_as(
+            "UPDATE rsvp.reservations SET note = $1 WHERE id = $2::UUID RETURNING *",
+        )
+        .bind(note)
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(rsvp)
     }
-    async fn get(&self, _id: ReservationId) -> Result<abi::Reservation, ReservationError> {
-        todo!()
+
+    /// get a reservation by id.
+    async fn get(&self, id: ReservationId) -> Result<abi::Reservation, ReservationError> {
+        let rsvp = sqlx::query_as("SELECT * FROM rsvp.reservations WHERE id = $1::UUID")
+            .bind(id)
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(rsvp)
     }
-    async fn delete(&self, _id: ReservationId) -> Result<abi::Reservation, ReservationError> {
-        todo!()
+
+    /// delete a reservation by id.
+    async fn delete(&self, id: ReservationId) -> Result<abi::Reservation, ReservationError> {
+        let rsvp = sqlx::query_as("DELETE FROM rsvp.reservations WHERE id = $1::UUID RETURNING *")
+            .bind(id)
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(rsvp)
     }
+
+    /// query a reservation
     async fn query(
         &self,
         query: abi::ReservationQuery,
@@ -122,6 +146,8 @@ impl Rsvp for ReservationManager {
 
 #[cfg(test)]
 mod tests {
+
+    use std::str::FromStr;
 
     use super::*;
     use abi::{to_timestamp, ReservationQueryBuilder, ReservationStatus};
@@ -193,9 +219,9 @@ mod tests {
             "I'll arrive at 3PM.Please hold",
         );
 
-        let err = manager.reserve(rsvp).await.unwrap_err();
+        let err = manager.reserve(rsvp).await;
         // TODO: check error type
-        println!("这里期望有一个 23P01 错误: {:?}", err);
+        assert!(err.is_err());
     }
 
     /// change status should work for pending reservation
@@ -464,5 +490,100 @@ mod tests {
         assert_eq!(rsvp[0].id, rsvp_1.id);
         assert_eq!(rsvp[1].id, rsvp_6.id);
         assert_eq!(rsvp[2].id, rsvp_7.id);
+    }
+
+    /// update_note should work
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn update_note_should_work() {
+        let manager = ReservationManager::new(migrated_pool.clone());
+        // generate a pending resource
+        let rsvp_8 = generate_resource(
+            "Syuu",
+            "hotel room 2",
+            "2021-01-16T12:00:00+0800",
+            "2025-01-26T14:00:00+0800",
+            "note 1",
+        );
+
+        let rsvp_8 = manager.reserve(rsvp_8).await.unwrap();
+        let rsvp_8 = manager
+            .update_note(
+                Uuid::from_str(&rsvp_8.id).unwrap(),
+                "note 2 AND DROP TABLE rsvp.reservations CASCADE -- + ???".into(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            rsvp_8.note,
+            "note 2 AND DROP TABLE rsvp.reservations CASCADE -- + ???"
+        );
+    }
+
+    /// get should work
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn get_should_work() {
+        let manager = ReservationManager::new(migrated_pool.clone());
+        // generate a pending resource
+        let rsvp_9 = generate_resource(
+            "M4n5ter",
+            "class room 1",
+            "1991-01-16T12:00:00+0800",
+            "1992-01-26T14:00:00+0800",
+            "note 1",
+        );
+
+        let rsvp_9 = manager.reserve(rsvp_9).await.unwrap();
+        let rsvp_9 = manager
+            .change_status(Uuid::from_str(&rsvp_9.id).unwrap())
+            .await
+            .unwrap();
+        let rsvp_9 = manager
+            .get(Uuid::from_str(&rsvp_9.id).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(rsvp_9.user_id, "M4n5ter");
+        assert_eq!(rsvp_9.resource_id, "class room 1");
+        assert_eq!(
+            rsvp_9.start,
+            Some("1991-01-16T12:00:00+0800".parse::<Timestamp>().unwrap())
+        );
+        assert_eq!(
+            rsvp_9.end,
+            Some("1992-01-26T14:00:00+0800".parse::<Timestamp>().unwrap())
+        );
+        assert_eq!(rsvp_9.note, "note 1");
+        assert_eq!(rsvp_9.status, ReservationStatus::Confirmed as i32);
+    }
+
+    /// delete should work
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn delete_should_work() {
+        let manager = ReservationManager::new(migrated_pool.clone());
+        // generate a pending resource
+        let rsvp_10 = generate_resource(
+            "M4n5ter",
+            "class room 1",
+            "1991-01-16T12:00:00+0800",
+            "1992-01-26T14:00:00+0800",
+            "note 1",
+        );
+        let rsvp_10 = manager.reserve(rsvp_10).await.unwrap();
+        let rsvp_10 = manager
+            .change_status(Uuid::from_str(&rsvp_10.id).unwrap())
+            .await
+            .unwrap();
+        let rsvp_10 = manager
+            .delete(Uuid::from_str(&rsvp_10.id).unwrap())
+            .await
+            .unwrap();
+        let err = manager
+            .get(Uuid::from_str(&rsvp_10.id).unwrap())
+            .await
+            .unwrap_err();
+        //TODO: parse error
+        assert_eq!(
+            err.to_string(),
+            "DB error: no rows returned by a query that expected to return at least one row"
+        );
     }
 }

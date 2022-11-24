@@ -4,6 +4,7 @@ mod types;
 use chrono::{DateTime, NaiveDateTime, Utc};
 pub use pb::*;
 use prost_types::Timestamp;
+pub use types::*;
 
 /// convert prost_types::Timestamp to utc time
 pub fn to_utc_time(timestamp: &Timestamp) -> DateTime<Utc> {

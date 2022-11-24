@@ -1,5 +1,7 @@
 use std::fmt;
 
+use sqlx::{postgres::PgRow, FromRow, Row};
+
 use crate::ReservationStatus;
 
 impl fmt::Display for ReservationStatus {
@@ -32,4 +34,10 @@ pub enum RsvpStatus {
     Pending,
     Confirmed,
     Blocked,
+}
+impl FromRow<'_, PgRow> for RsvpStatus {
+    fn from_row(row: &PgRow) -> Result<Self, sqlx::Error> {
+        let status: RsvpStatus = row.try_get("status")?;
+        Ok(status)
+    }
 }
