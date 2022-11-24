@@ -34,7 +34,7 @@ jobs:
       - name: Lint rust sources
         run: cargo clippy --all-targets --all-features --tests --benches -- -D warnings
       - name: Setup PostgreSQL
-        uses: hank-cp/postgresql-action
+        uses: harmon758/postgresql-action@v1
         with:
           postgresql version: '15'
           postgresql db: 'm4n5ter'
