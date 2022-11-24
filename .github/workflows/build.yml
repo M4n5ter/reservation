@@ -33,32 +33,13 @@ jobs:
         run: cargo check --all
       - name: Lint rust sources
         run: cargo clippy --all-targets --all-features --tests --benches -- -D warnings
-      - name: 'Setup PostgreSQL'
-        description: 'Setup a PostgreSQL database'
-        branding:
-          icon: 'database'
-          color: 'blue'
-        inputs:
-          # See https://hub.docker.com/_/postgres for supported versions
-          # and further details on input environment variables
-          postgresql version:
-            description: 'Version of PostgreSQL to use'
-            required: false
-            default: '15'
-          postgresql db:
-            description: 'POSTGRES_DB - name for the default database that is created'
-            required: false
-            default: 'm4n5ter'
-          postgresql user:
-            description: 'POSTGRES_USER - create the specified user with superuser power'
-            required: false
-            default: 'm4n5ter'
-          postgresql password:
-            description: 'POSTGRES_PASSWORD - superuser password'
-            required: false
-            default: '123456'
-        runs:
-          using: 'docker'
-          image: 'Dockerfile'
+      - name: Setup PostgreSQL
+        uses: hank-cp/postgresql-action
+        with:
+          postgresql version: '15'
+          postgresql db: 'm4n5ter'
+          postgresql user: 'm4n5ter'
+          postgresql password: '123456'
+          postgresql port: 5432
       - name: Execute rust tests
         run: cargo nextest run --all-features
