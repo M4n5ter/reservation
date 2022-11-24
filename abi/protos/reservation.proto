@@ -90,6 +90,10 @@ message ReservationQuery {
   google.protobuf.Timestamp end = 5;
   // sort direction
   bool desc = 6;
+  // page, 0 to use default page size(maybe not `0`)
+  int64 page = 7;
+  // page size, 0 to use default page size(maybe not `0`)
+  int64 page_size = 8;
 }
 
 // To query reservations, send a QueryRequest

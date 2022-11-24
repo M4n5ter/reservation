@@ -1,14 +1,22 @@
-use std::ops::Bound;
-
+use crate::{to_timestamp, types::reservation_status::RsvpStatus, Reservation, ReservationStatus};
 use chrono::{DateTime, Utc};
 use sqlx::{
     postgres::{types::PgRange, PgRow},
     types::Uuid,
     FromRow, Row,
 };
+use std::ops::Bound;
 
-use crate::{to_timestamp, Reservation, ReservationStatus, RsvpStatus};
+impl Reservation {
+    /// get status that can be used in sqlx query.
+    pub fn get_status(&self) -> String {
+        ReservationStatus::from_i32(self.status)
+            .unwrap()
+            .to_string()
+    }
+}
 
+// map a row to a reservation
 impl FromRow<'_, PgRow> for Reservation {
     fn from_row(row: &PgRow) -> Result<Self, sqlx::Error> {
         let id = row.get::<Uuid, &str>("id").to_string();

@@ -1,13 +1,17 @@
-use abi::Reservation;
-use async_trait::async_trait;
-use chrono::{DateTime, TimeZone};
-pub use error::ReservationError;
-use sqlx::{postgres::types::PgRange, PgPool};
-
 mod error;
 mod manager;
+mod validator;
+mod window;
 
-type ReservationId = String;
+use abi::Reservation;
+use async_trait::async_trait;
+pub use error::ReservationError;
+use sqlx::{types::Uuid, PgPool};
+use std::str::FromStr;
+use validator::Validator;
+use window::Window;
+
+pub type ReservationId = Uuid;
 
 pub struct ReservationManager {
     pool: PgPool,
@@ -18,22 +22,6 @@ impl ReservationManager {
     }
 }
 
-pub struct Window<T>
-where
-    T: TimeZone,
-{
-    start: DateTime<T>,
-    end: DateTime<T>,
-}
-impl<T: TimeZone> Window<T> {
-    pub fn new(start: DateTime<T>, end: DateTime<T>) -> Self {
-        Self { start, end }
-    }
-}
-
-trait Validator {
-    fn validate(&self) -> Result<(), ReservationError>;
-}
 #[async_trait]
 pub trait Rsvp {
     /// 预定资源
@@ -54,13 +42,13 @@ pub trait Rsvp {
     async fn query(
         &self,
         query: abi::ReservationQuery,
-    ) -> Result<abi::Reservation, ReservationError>;
+    ) -> Result<Vec<abi::Reservation>, ReservationError>;
 }
 
 impl Validator for ReservationId {
     // if empty, return error
     fn validate(&self) -> Result<(), ReservationError> {
-        if self.is_empty() {
+        if self.is_nil() {
             Err(ReservationError::InvalidReservationId)
         } else {
             Ok(())
@@ -69,32 +57,12 @@ impl Validator for ReservationId {
 }
 
 impl Validator for Reservation {
-    /// validate reservation's start and end time
+    /// validate a reservation
     fn validate(&self) -> Result<(), ReservationError> {
-        // if start or end is none, return error
-        if self.start.is_none() || self.end.is_none() {
-            return Err(ReservationError::InvalidTimespan);
-        }
-        // if start is after end, return error
-        let start = self.start.as_ref().unwrap().seconds;
-        let end = self.end.as_ref().unwrap().seconds;
-        if start > end {
-            return Err(ReservationError::InvalidTimespan);
-        }
-
+        // validate timespan
+        Window::from_reservation(self).validate()?;
+        // validate reservation id
+        ReservationId::from_str(&self.id).unwrap().validate()?;
         Ok(())
-    }
-}
-
-// convert Window to PgRange
-impl<T> From<Window<T>> for PgRange<DateTime<T>>
-where
-    T: TimeZone,
-{
-    fn from(window: Window<T>) -> Self {
-        PgRange {
-            start: std::ops::Bound::Excluded(window.start),
-            end: std::ops::Bound::Excluded(window.end),
-        }
     }
 }
