@@ -24,7 +24,7 @@ jobs:
         run: rustup toolchain install stable --component llvm-tools-preview
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
-      - name: install nextest
+      - name: Install nextest
         uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v1
       - name: Check code format
